@@ -23,6 +23,14 @@ class CircularBuffer {
         return ((startIndex + Size) - nrOfElements) % Size;
     }
 
+    bool _empty() {
+        return nrOfElements == 0;
+    }
+
+    bool _full() {
+        return nrOfElements == Size;
+    }
+
 public:
     /**
      * Pushes element onto buffer.
@@ -31,7 +39,7 @@ public:
      */
     void push(Type element) {
         std::unique_lock<std::mutex> lock(mutex);
-        while(full()) wasPopped.wait(lock); // wait for elements to be popped if full
+        while(_full()) wasPopped.wait(lock); // wait for elements to be popped if full
 
         buffer[startIndex] = element;
         startIndex++;
@@ -48,7 +56,7 @@ public:
      */
     Type pop() {
         std::unique_lock<std::mutex> lock(mutex);
-        while(empty()) wasPushed.wait(lock); // wait for elements to be pushed if empty
+        while(_empty()) wasPushed.wait(lock); // wait for elements to be pushed if empty
 
         uint32_t endIndex = getEndIndex();
         Type element = buffer[endIndex];
@@ -62,7 +70,8 @@ public:
      * Current number of elements in buffer.
      * @return current element count
      */
-    [[nodiscard]] uint32_t count() const {
+    [[nodiscard]] uint32_t count() {
+        std::unique_lock<std::mutex> lock(mutex);
         return nrOfElements;
     }
 
@@ -70,16 +79,18 @@ public:
      * Is buffer empty.
      * @return true if buffer empty
      */
-    [[nodiscard]] bool empty() const {
-        return nrOfElements == 0;
+    [[nodiscard]] bool empty() {
+        std::unique_lock<std::mutex> lock(mutex);
+        return _empty();
     }
 
     /**
      * Is buffer full.
      * @return true if buffer full
      */
-    [[nodiscard]] bool full() const {
-        return nrOfElements == Size;
+    [[nodiscard]] bool full() {
+        std::unique_lock<std::mutex> lock(mutex);
+        return _full();
     }
 };
 
