@@ -11,6 +11,10 @@ public:
     [[nodiscard]] bool empty() const {
         return true;
     }
+
+    [[nodiscard]] uint32_t count() const {
+        return 0;
+    }
 };
 
 #endif //CIRCULARBUFFER_CIRCULARBUFFER_H
