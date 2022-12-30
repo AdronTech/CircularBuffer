@@ -15,15 +15,20 @@ public:
     void push(Type element) {
         buffer[startIndex] = element;
         startIndex++;
+        startIndex %= Size;
     }
 
     Type pop() {
         Type element = buffer[endIndex];
         endIndex++;
+        endIndex %= Size;
         return element;
     }
 
     [[nodiscard]] uint32_t count() const {
+        if (startIndex < endIndex) {
+            return (startIndex + Size) - endIndex;
+        }
         return startIndex - endIndex;
     }
 

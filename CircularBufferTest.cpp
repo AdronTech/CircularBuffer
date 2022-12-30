@@ -34,10 +34,46 @@ TEST(CircularBuffer, CountCorrectAfterPush) {
     buffer.push(42);
     EXPECT_EQ(buffer.count(), 1) << "Buffer count does not reflect number of pushes!";
 }
+
 TEST(CircularBuffer, CountCorrectAfterPushAndPop) {
     auto buffer = CircularBuffer<int, 20>();
     buffer.push(42);
     auto elem = buffer.pop();
     EXPECT_EQ(elem, 42) << "Popped element should be equal to pushed element";
     EXPECT_EQ(buffer.count(), 0) << "Buffer count should be zero after popping pushed element";
+}
+
+TEST(CircularBuffer, CountHandlesOverflow) {
+    auto buffer = CircularBuffer<int, 3>();
+    EXPECT_EQ(buffer.count(), 0);
+
+    buffer.push(42);
+    EXPECT_EQ(buffer.count(), 1);
+
+    buffer.push(1337);
+    EXPECT_EQ(buffer.count(), 2);
+
+    EXPECT_EQ(buffer.pop(), 42);
+    EXPECT_EQ(buffer.count(), 1);
+
+    buffer.push(0xdead);
+    EXPECT_EQ(buffer.count(), 2);
+
+    EXPECT_EQ(buffer.pop(), 1337);
+    EXPECT_EQ(buffer.count(), 1);
+
+    buffer.push(0xbeef);
+    EXPECT_EQ(buffer.count(), 2);
+
+    EXPECT_EQ(buffer.pop(), 0xdead);
+    EXPECT_EQ(buffer.count(), 1);
+
+    buffer.push(31415);
+    EXPECT_EQ(buffer.count(), 2);
+
+    EXPECT_EQ(buffer.pop(), 0xbeef);
+    EXPECT_EQ(buffer.count(), 1);
+
+    EXPECT_EQ(buffer.pop(), 31415);
+    EXPECT_EQ(buffer.count(), 0);
 }
