@@ -3,6 +3,10 @@
 //
 
 #include <gtest/gtest.h>
+
+#include <iostream>
+#include <thread>
+
 #include "CircularBuffer.h"
 
 TEST(CircularBuffer, InitialEmpty) {
@@ -76,4 +80,31 @@ TEST(CircularBuffer, CountHandlesOverflow) {
 
     EXPECT_EQ(buffer.pop(), 31415);
     EXPECT_EQ(buffer.count(), 0);
+}
+
+void prod(CircularBuffer<int, 3> &buffer) {
+    for(int count = 0; count < 1000; ++count) {
+        std::cout << "push " << count << " - " << buffer.count() << std::endl;
+        buffer.push(count);
+    }
+}
+
+void cons(CircularBuffer<int, 3> &buffer) {
+    for(int count = 0; count < 1000; ++count) {
+        auto elem = buffer.pop();
+        std::cout << "pop " << elem << " - " << buffer.count() << std::endl;
+        EXPECT_EQ(elem, count);
+    }
+}
+
+// Not reliable and repeatable test
+TEST(CircularBuffer, MultiThreaded) {
+    auto buffer = CircularBuffer<int, 3>();
+
+    std::thread producer;
+    producer = std::thread(prod, std::ref(buffer));
+
+    cons(buffer);
+
+    producer.join();
 }
