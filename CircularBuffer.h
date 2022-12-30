@@ -5,6 +5,7 @@
 #ifndef CIRCULARBUFFER_CIRCULARBUFFER_H
 #define CIRCULARBUFFER_CIRCULARBUFFER_H
 
+#include <utility>
 #include <mutex>
 #include <condition_variable>
 
@@ -14,7 +15,7 @@ class CircularBuffer {
     uint32_t startIndex{0};
     // a variable for counting the elements was used instead of a start and end index,
     // because with a start and end index the case (start == end) could mean empty or full
-    uint32_t nrOfElements{0};
+    std::size_t nrOfElements{0};
 
     // this mutex is used to control access to the buffer and the count variable
     std::mutex mutex;
@@ -37,23 +38,33 @@ class CircularBuffer {
         return nrOfElements == Size;
     }
 
-public:
-    /**
-     * Pushes element onto buffer.
-     * If buffer is full it waits until buffer is popped by other thread.
-     * @param element to be pushed
-     */
-    void push(Type element) {
+    template <typename U>
+    void push_fwd(U &&element) {
         std::unique_lock<std::mutex> lock(mutex);
         while(_full()) wasPopped.wait(lock); // wait for elements to be popped if full
 
-        buffer[startIndex] = element;
+        buffer[startIndex] = std::forward<U>(element); // either invoke copy or move assignment
         startIndex++;
         nrOfElements++;
         startIndex %= Size; // keep index within Size range
 
         wasPushed.notify_all(); // notify all threads that buffer was filled up
     }
+
+public:
+    /**
+     * Pushes element onto buffer. (copy)
+     * If buffer is full it waits until buffer is popped by other thread.
+     * @param element to be pushed
+     */
+    void push(const Type &element) { push_fwd(element); }
+
+    /**
+     * Pushes element onto buffer. (move)
+     * If buffer is full it waits until buffer is popped by other thread.
+     * @param element to be pushed
+     */
+    void push(Type &&element) { push_fwd(std::move(element)); }
 
     /**
      * Pops element from buffer
@@ -65,7 +76,7 @@ public:
         while(_empty()) wasPushed.wait(lock); // wait for elements to be pushed if empty
 
         uint32_t endIndex = getEndIndex();
-        Type element = buffer[endIndex];
+        Type element = std::move(buffer[endIndex]); // move element from buffer
         nrOfElements--;
 
         wasPopped.notify_all(); // notify all threads that buffer was emptied up
@@ -76,7 +87,7 @@ public:
      * Current number of elements in buffer.
      * @return current element count
      */
-    [[nodiscard]] uint32_t count() {
+    [[nodiscard]] std::size_t count() {
         std::unique_lock<std::mutex> lock(mutex);
         return nrOfElements;
     }

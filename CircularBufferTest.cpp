@@ -108,3 +108,22 @@ TEST(CircularBuffer, MultiThreaded) {
 
     producer.join();
 }
+
+// just for manual evaluation to evaluate move semantics
+struct Object {
+    Object() { std::cout << "ctor" << std::endl; };
+    Object(const Object &) { std::cout << "copy ctor" << std::endl; };
+    Object &operator =(const Object &)  noexcept { std::cout << "copy" << std::endl; };
+    Object(Object &&)  noexcept { std::cout << "move ctor" << std::endl; };
+    Object &operator =(Object &&)  noexcept { std::cout << "move" << std::endl; };
+};
+
+TEST(CircularBuffer, moveTest) {
+    auto buffer = CircularBuffer<Object, 3>();
+    auto obj = Object{};
+    buffer.push(Object{});
+    buffer.push(obj);
+    buffer.push(std::move(obj));
+
+    auto ret = buffer.pop();
+}
