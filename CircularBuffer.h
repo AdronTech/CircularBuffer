@@ -12,12 +12,18 @@ template <typename Type, int Size>
 class CircularBuffer {
     Type buffer[Size];
     uint32_t startIndex{0};
+    // a variable for counting the elements was used instead of a start and end index,
+    // because with a start and end index the case (start == end) could mean empty or full
     uint32_t nrOfElements{0};
 
+    // this mutex is used to control access to the buffer and the count variable
     std::mutex mutex;
+    // this condition variable is used to denote an element was pushed
     std::condition_variable wasPushed;
+    // this condition variable is used to denote an element was popped
     std::condition_variable wasPopped;
 
+    // helper methods
     uint32_t getEndIndex() {
         // offset startIndex by Size before modulo in order to prevent negative values
         return ((startIndex + Size) - nrOfElements) % Size;
